@@ -25,6 +25,14 @@ $UPDATE_DOWNLOAD_STATUS_CODES = @{
     4 = "Failed"
     5 = "Aborted"
 }
+$UPDATE_INSTALL_STATUS_CODES = @{
+    0 = "NotStarted"
+    1 = "InProgress"
+    2 = "Installed"
+    3 = "InstalledWithErrors"
+    4 = "Failed"
+    5 = "Aborted"
+}
 
 function Write-UpdateInformation {
     Param(
@@ -138,9 +146,11 @@ function Install-WindowsUpdate {
             }
 
             $updateSession = New-Object -ComObject $UPDATE_SESSION_COM_CLASS
-            $updateDownloader = $updateSession.CreateUpdateDownloader()
             $updateColl = New-Object -ComObject $UPDATE_COLL_COM_CLASS
             $updateColl.add($update) | Out-Null
+
+            # DOWNLOAD UPDATE
+            $updateDownloader = $updateSession.CreateUpdateDownloader()
             $updateDownloader.Updates = $updateColl
             $maxRetries = 5
             $retries = 0
@@ -155,11 +165,33 @@ function Install-WindowsUpdate {
                     break
                 }
             }
-            $updateColl.clear()
             if ($retries -eq $maxRetries) {
                 write-host "$retries"
                 throw "Failed to download update."
             }
+
+            # INSTALL UPDATE
+            $updateInstaller = $updateSession.CreateUpdateInstaller()
+            $updateInstaller.Updates = $updateColl
+            $maxRetries = 5
+            $retries = 0
+            while ($retries -lt $maxRetries) {
+                $installResult = $updateInstaller.Install()
+                if ($installResult.ResultCode -ne 2) {
+                    $retries++
+                    Write-Host "Failed to install update. Reason: " + `
+                        $UPDATE_INSTALL_STATUS_CODES[$installResult.ResultCode]
+                } else {
+                    Write-Host "Update has been installed."
+                    break
+                }
+            }
+            if ($retries -eq $maxRetries) {
+                write-host "$retries"
+                throw "Failed to install update."
+            }
+
+            $updateColl.clear()
         }
     }
 }
