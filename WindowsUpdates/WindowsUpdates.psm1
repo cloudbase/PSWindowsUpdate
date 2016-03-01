@@ -13,6 +13,43 @@
 #    under the License.
 $ErrorActionPreference = "Stop"
 
+$UPDATE_SESSION_COM_CLASS = "Microsoft.Update.Session"
+$SERVER_SELECTION_WINDOWS_UPDATE = 2
+
+function Write-UpdateInformation {
+    Param(
+        [Parameter(Mandatory=$true)]
+        $Updates
+    )
+    foreach ($update in $Updates) {
+        Write-Host ("Update title: " + $update.Title)
+        Write-Host ($update.Categories | Select-Object Name)
+        Write-Host ("Update size: " + ([int]($update.MaxDownloadSize/1MB) + 1) + "MB")
+        Write-Host ""
+    }
+}
+
+function Get-UpdateSearcher {
+    $updateSession = New-Object -ComObject $UPDATE_SESSION_COM_CLASS
+    return $updateSession.CreateUpdateSearcher()
+}
+
+function Get-LocalUpdates {
+    Param(
+        [Parameter(Mandatory=$true)]
+        $UpdateSearcher,
+        [Parameter(Mandatory=$true)]
+        [string]$SearchCriteria
+    )
+    try {
+        $updatesResult = $updateSearcher.Search($searchCriteria)
+    } catch [Exception]{
+        Write-Host "Failed to search for updates"
+        throw
+    }
+    return $updatesResult.Updates
+}
+
 function Get-WindowsUpdate {
     <#
     .SYNOPSIS
@@ -23,7 +60,14 @@ function Get-WindowsUpdate {
     Param(
     )
     PROCESS {
-        return @()
+        $updateSearcher = Get-UpdateSearcher
+        # Set the update source server to Windows Update
+        $updateSearcher.ServerSelection = $SERVER_SELECTION_WINDOWS_UPDATE
+        # Set search criteria
+        $searchCriteria = "( IsInstalled = 0 and IsHidden = 0)"
+        $updates = Get-LocalUpdates -UpdateSearcher $updateSearcher `
+            -SearchCriteria $searchCriteria
+        return $updates
     }
 }
 
