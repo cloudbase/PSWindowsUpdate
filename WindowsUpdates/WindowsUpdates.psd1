@@ -48,7 +48,8 @@ PowerShellVersion = '2.0'
 # Functions to export from this module
 FunctionsToExport = @(
     "Get-WindowsUpdate",
-    "Get-RebootRequired"
+    "Get-RebootRequired",
+    "Install-WindowsUpdate"
     )
 # Cmdlets to export from this module
 CmdletsToExport = '*'

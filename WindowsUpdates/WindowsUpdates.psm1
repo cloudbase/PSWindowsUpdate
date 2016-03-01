@@ -15,7 +15,16 @@ $ErrorActionPreference = "Stop"
 
 $UPDATE_SESSION_COM_CLASS = "Microsoft.Update.Session"
 $UPDATE_SYSTEM_INFO_COM_CLASS = "Microsoft.Update.SystemInfo"
+$UPDATE_COLL_COM_CLASS = "Microsoft.Update.UpdateColl"
 $SERVER_SELECTION_WINDOWS_UPDATE = 2
+$UPDATE_DOWNLOAD_STATUS_CODES = @{
+    0 = "NotStarted"
+    1 = "InProgress"
+    2 = "Downloaded"
+    3 = "DownloadedWithErrors"
+    4 = "Failed"
+    5 = "Aborted"
+}
 
 function Write-UpdateInformation {
     Param(
@@ -33,6 +42,11 @@ function Write-UpdateInformation {
 function Get-UpdateSearcher {
     $updateSession = New-Object -ComObject $UPDATE_SESSION_COM_CLASS
     return $updateSession.CreateUpdateSearcher()
+}
+
+function Get-UpdateDownloader {
+    $updateSession = New-Object -ComObject $UPDATE_SESSION_COM_CLASS
+    return $updateSession.CreateUpdateDownloader()
 }
 
 function Get-LocalUpdates {
@@ -95,6 +109,59 @@ function Get-RebootRequired {
      Windows updates.
     #>
     return ((Get-UpdateRebootRequired) -or (Get-RegKeyRebootRequired))
+}
+
+function Install-WindowsUpdate {
+    <#
+    .SYNOPSIS
+     Install-WindowsUpdate is a command that will install the updates given as
+     a parameter on the Windows operating system.
+     .Parameter Updates
+     The required value can be obtained by running Get-WindowsUpdate
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(
+            Position=0,
+            Mandatory=$true,
+            ValueFromPipeline=$true)]
+        $Updates
+    )
+    PROCESS {
+        foreach ($update in $Updates) {
+            $updateSize = ([int]($update.MaxDownloadSize/1MB) + 1)
+            Write-Host ("Installing Update: {0} ({1}MB)" -f @($update.Title, $updateSize))
+
+            if ($update.EulaAccepted -eq 0) {
+                Write-Host ("AcceptEula for Update: " + $update.Title)
+                $update.AcceptEula()
+            }
+
+            $updateSession = New-Object -ComObject $UPDATE_SESSION_COM_CLASS
+            $updateDownloader = $updateSession.CreateUpdateDownloader()
+            $updateColl = New-Object -ComObject $UPDATE_COLL_COM_CLASS
+            $updateColl.add($update) | Out-Null
+            $updateDownloader.Updates = $updateColl
+            $maxRetries = 5
+            $retries = 0
+            while ($retries -lt $maxRetries) {
+                $downloadResult = $updateDownloader.Download()
+                if ($downloadResult.ResultCode -ne 2) {
+                    $retries++
+                    Write-Host "Failed to download update. Reason: " + `
+                        $UPDATE_DOWNLOAD_STATUS_CODES[$downloadResult.ResultCode]
+                } else {
+                    Write-Host "Update has been downloaded."
+                    break
+                }
+            }
+            $updateColl.clear()
+            if ($retries -eq $maxRetries) {
+                write-host "$retries"
+                throw "Failed to download update."
+            }
+        }
+    }
 }
 
 Export-ModuleMember -Function * -Alias *
