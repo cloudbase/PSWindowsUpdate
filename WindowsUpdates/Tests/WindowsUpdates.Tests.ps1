@@ -96,6 +96,48 @@ Describe "Test Get-WindowsUpdate" {
         { return @("updates") }
 
     It "Should return fake updates" {
-        Compare-Arrays (Get-WindowsUpdate) @("updates")
+        Compare-Arrays (Get-WindowsUpdate) @("updates") | Should Be $true
+    }
+}
+
+Describe "Test Get-RebootRequired" {
+    AfterEach {
+        Clear-Environment
+    }
+
+    Context "On reboot true" {
+        Mock Get-UpdateRebootRequired -Verifiable -ModuleName WindowsUpdates `
+            { return $true }
+        Mock Get-RegKeyRebootRequired -Verifiable -ModuleName WindowsUpdates `
+            { return $true }
+
+        $rebootStatus = Get-RebootRequired
+        It "Should return true" {
+            $rebootStatus | Should Be $true
+        }
+        It "Should verify all methods" {
+            Assert-MockCalled Get-UpdateRebootRequired -Exactly 1 `
+                -ModuleName WindowsUpdates
+            Assert-MockCalled Get-RegKeyRebootRequired -Exactly 0 `
+                -ModuleName WindowsUpdates
+        }
+    }
+
+    Context "On reboot false" {
+        Mock Get-UpdateRebootRequired -Verifiable -ModuleName WindowsUpdates `
+            { return $false }
+        Mock Get-RegKeyRebootRequired -Verifiable -ModuleName WindowsUpdates `
+            { return $false }
+
+        $rebootStatus = Get-RebootRequired
+        It "Should return false" {
+            $rebootStatus | Should Be $false
+        }
+        It "Should verify all methods" {
+            Assert-MockCalled Get-UpdateRebootRequired -Exactly 1 `
+                -ModuleName WindowsUpdates
+            Assert-MockCalled Get-RegKeyRebootRequired -Exactly 1 `
+                -ModuleName WindowsUpdates
+        }
     }
 }

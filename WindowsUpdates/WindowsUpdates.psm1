@@ -14,6 +14,7 @@
 $ErrorActionPreference = "Stop"
 
 $UPDATE_SESSION_COM_CLASS = "Microsoft.Update.Session"
+$UPDATE_SYSTEM_INFO_COM_CLASS = "Microsoft.Update.SystemInfo"
 $SERVER_SELECTION_WINDOWS_UPDATE = 2
 
 function Write-UpdateInformation {
@@ -69,6 +70,31 @@ function Get-WindowsUpdate {
             -SearchCriteria $searchCriteria
         return $updates
     }
+}
+
+function Get-RegKeyRebootRequired {
+    $basePath = "HKLM:\\SOFTWARE\Microsoft\Windows\CurrentVersion\"
+    $cbsRebootRequired = Get-Item -Path "${basePath}Component Based Servicing\RebootPending" `
+        -ErrorAction SilentlyContinue
+    $auRebootRequired = Get-Item -Path "${basePath}\WindowsUpdate\Auto Update\RebootRequired" `
+        -ErrorAction SilentlyContinue
+    return ($cbsRebootRequired -and $auRebootRequired)
+}
+
+function Get-UpdateRebootRequired {
+        $systemInfo = New-Object -ComObject $UPDATE_SYSTEM_INFO_COM_CLASS
+        return $systemInfo.RebootRequired
+}
+
+function Get-RebootRequired {
+    <#
+    .SYNOPSIS
+     Get-RebootRequired is a command that will return the reboot required status
+     of a Windows machine. This status check is necessary in order to know
+     whether to perform a machine restart in order to continue to install the
+     Windows updates.
+    #>
+    return ((Get-UpdateRebootRequired) -or (Get-RegKeyRebootRequired))
 }
 
 Export-ModuleMember -Function * -Alias *
