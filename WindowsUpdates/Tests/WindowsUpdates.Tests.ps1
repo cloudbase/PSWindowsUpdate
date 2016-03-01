@@ -3,7 +3,7 @@ $moduleHome = Split-Path -Parent $here
 $moduleRoot = Split-Path -Parent $moduleHome
 
 $modulePath = ${env:PSModulePath}.Split(";")
-if(!($moduleRoot -in $modulePath)){
+if (!($moduleRoot -in $modulePath)){
     $env:PSModulePath += ";$moduleRoot"
 }
 $savedEnv = [System.Environment]::GetEnvironmentVariables()
@@ -21,11 +21,13 @@ function Clear-Environment {
     }
 }
 
-Describe "Test Dummy" {
+Import-Module WindowsUpdates
+
+Describe "Test Get-WindowsUpdate" {
     AfterEach {
         Clear-Environment
     }
-    It "Should equal $false" {
-        $false | Should Be $false
+    It "Updates list should be empty" {
+        (Get-WindowsUpdate).Count | Should Be 0
     }
 }
