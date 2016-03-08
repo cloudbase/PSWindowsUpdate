@@ -70,7 +70,18 @@ function Get-LocalUpdates {
         Write-Host "Failed to search for updates"
         throw
     }
-    return $updatesResult.Updates
+    return $updatesResult
+}
+
+function Add-WindowsUpdateToCollection {
+    Param(
+        [Parameter(Mandatory=$true)]
+        $Collection,
+        [Parameter(Mandatory=$true)]
+        $Update
+    )
+
+    $Collection.Add($Update) | Out-Null
 }
 
 function Get-WindowsUpdate {
@@ -81,6 +92,8 @@ function Get-WindowsUpdate {
     #>
     [CmdletBinding()]
     Param(
+        [Parameter(Mandatory=$false)]
+        [array]$ExcludeKBId=@()
     )
     PROCESS {
         $updateSearcher = Get-UpdateSearcher
@@ -88,9 +101,26 @@ function Get-WindowsUpdate {
         $updateSearcher.ServerSelection = $SERVER_SELECTION_WINDOWS_UPDATE
         # Set search criteria
         $searchCriteria = "( IsInstalled = 0 and IsHidden = 0)"
-        $updates = Get-LocalUpdates -UpdateSearcher $updateSearcher `
+        $updateResult = Get-LocalUpdates -UpdateSearcher $updateSearcher `
             -SearchCriteria $searchCriteria
-        return $updates
+        if (!$updateResult -or !$updateResult.Updates) {
+            return
+        }
+        $updates = $updateResult.Updates
+        $filteredUpdates = New-Object -ComObject $UPDATE_COLL_COM_CLASS
+
+        for ($i=0; $i -lt $updates.Count; $i++) {
+            $update = $updates[$i]
+            $updateKBId = ($update.KBArticleIDs -join ", KB")
+            if ($ExcludeKBId -contains ("KB" + $updateKBId)) {
+                Write-Verbose ("Exclude update KB{0}" `
+                    -f @($updateKBId))
+            } else {
+                Add-WindowsUpdateToCollection $filteredUpdates $update
+            }
+        }
+
+        return $filteredUpdates
     }
 }
 

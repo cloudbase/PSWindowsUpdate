@@ -93,10 +93,26 @@ Describe "Test Get-WindowsUpdate" {
         }
 
     Mock Get-LocalUpdates -Verifiable -ModuleName WindowsUpdates `
-        { return @("updates") }
+        {
+            return @{
+                "Updates"=@("update");
+                "Count"=1
+            }
+        }
+
+    Mock Add-WindowsUpdateToCollection -Verifiable -ModuleName WindowsUpdates `
+        {
+            return @{
+                "Updates"=@("update");
+                "Count"=1
+            }
+        }
 
     It "Should return fake updates" {
-        Compare-Arrays (Get-WindowsUpdate) @("updates") | Should Be $true
+        Compare-HashTables (Get-WindowsUpdate) @{
+                "Updates"=@("update");
+                "Count"=1
+            } | Should Be $true
     }
 }
 

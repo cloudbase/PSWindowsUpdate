@@ -9,10 +9,21 @@ A PowerShell Module for automated Windows Updates Management, which will offer:
 
 ```powershell
 Import-Module WindowsUpdates
-Get-WindowsUpdate | Install-WindowsUpdate
-if (Get-RebootRequired) {
-    Restart-Computer -Force
+
+$updates = Get-WindowsUpdate
+if ($updates) {
+    Install-WindowsUpdate
+    if (Get-RebootRequired) {
+        Restart-Computer -Force
+    }
 }
+```
+# If you want to exclude KBIDs
+
+```powershell
+Import-Module WindowsUpdates
+
+$updates = Get-WindowsUpdate -Verbose -ExcludeKBId @("KB2267602")
 ```
 
 ## Compatibility
