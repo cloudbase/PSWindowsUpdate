@@ -12,7 +12,7 @@ Import-Module WindowsUpdates
 
 $updates = Get-WindowsUpdate
 if ($updates) {
-    Install-WindowsUpdate
+    Install-WindowsUpdate $updates
     if (Get-RebootRequired) {
         Restart-Computer -Force
     }
