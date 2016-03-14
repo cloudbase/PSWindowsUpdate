@@ -110,7 +110,7 @@ function Get-WindowsUpdate {
         $filteredUpdates = New-Object -ComObject $UPDATE_COLL_COM_CLASS
 
         for ($i=0; $i -lt $updates.Count; $i++) {
-            $update = $updates[$i]
+            $update = $updates.Item($i)
             $updateKBId = ($update.KBArticleIDs -join ", KB")
             if ($ExcludeKBId -contains ("KB" + $updateKBId)) {
                 Write-Verbose ("Exclude update KB{0}" `
