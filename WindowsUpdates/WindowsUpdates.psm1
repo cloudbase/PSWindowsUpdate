@@ -93,7 +93,9 @@ function Get-WindowsUpdate {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$false)]
-        [array]$ExcludeKBId=@()
+        [array]$ExcludeKBId=@(),
+        [Parameter(Mandatory=$false)]
+        [array]$ExcludeHardwareId=@()
     )
     PROCESS {
         $updateSearcher = Get-UpdateSearcher
@@ -108,13 +110,14 @@ function Get-WindowsUpdate {
         }
         $updates = $updateResult.Updates
         $filteredUpdates = New-Object -ComObject $UPDATE_COLL_COM_CLASS
-
         for ($i=0; $i -lt $updates.Count; $i++) {
             $update = $updates.Item($i)
             $updateKBId = ($update.KBArticleIDs -join ", KB")
             if ($ExcludeKBId -contains ("KB" + $updateKBId)) {
                 Write-Verbose ("Exclude update KB{0}" `
                     -f @($updateKBId))
+            } elseif ($ExcludeHardwareId -contains $update.DriverHardwareID) {
+                Write-Verbose ("Exclude update: {0}" -f @($Title))
             } else {
                 Add-WindowsUpdateToCollection $filteredUpdates $update
             }
