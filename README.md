@@ -18,12 +18,12 @@ if ($updates) {
     }
 }
 ```
-# If you want to exclude KBIDs
+# If you want to exclude KBIDs and updates for specific hardware ID's
 
 ```powershell
 Import-Module WindowsUpdates
 
-$updates = Get-WindowsUpdate -Verbose -ExcludeKBId @("KB2267602")
+$updates = Get-WindowsUpdate -Verbose -ExcludeKBId @("KB2267602") -ExcludeHardwareId @("{084f01fa-e634-4d77-83ee-074817c03581}")
 ```
 
 ## Compatibility
